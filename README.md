@@ -164,7 +164,20 @@ Each JSON file contains:
 
 These files allow the performance of the baseline and extended models to be compared without retraining.
 
-## 7. Notes
+## 7. Code Reproducibility Checklist
+
+This repository and the project report are separate artifacts. The report includes its own reproducibility checklist in Appendix A. Following the Machine Learning Reproducibility Checklist guidelines:
+
+- [x] **Training code:** The baseline ABMIL and critical-instance-guided ABMIL implementations are provided in their respective Jupyter notebooks.
+- [x] **Evaluation code:** Both implementations include evaluation procedures for accuracy, AUROC, F1-score, and cross-entropy loss.
+- [x] **Dependencies:** Required Python packages are listed in `requirements.txt`.
+- [x] **Reproduction instructions:** The README provides instructions for downloading the datasets, configuring file paths, and running the experiments.
+- [x] **Data:** Pre-extracted HDF5 feature files are available through Zenodo, with dataset configurations provided in `config/` and dataset split files in `dataset_csv/`.
+- [x] **Model selection:** The best checkpoint is selected using the sum of validation AUROC and F1-score.
+- [x] **Experimental results:** Baseline and extension results are saved in JSON files under `critical_instance_results/`.
+- [x] **Training configuration:** Both models are trained for 30 epochs, with an auxiliary loss weight of 0.25 used for the proposed extension.
+
+## 8. Notes
 
 - The models use pre-extracted patch embeddings rather than processing raw whole-slide images during training.
 - Original WSI files and extracted feature files must be provided separately.
@@ -172,7 +185,7 @@ These files allow the performance of the baseline and extended models to be comp
 - A GPU is recommended to accelerate model training.
 - The baseline and research extension should be evaluated using the same dataset splits for a fair comparison.
 
-## 8. References
+## 9. References
 
 **[1]** M. Ilse, J. Tomczak, and M. Welling, "Attention-based Deep Multiple Instance Learning," *Proceedings of the 35th International Conference on Machine Learning (ICML)*, vol. 80, pp. 2127–2136, 2018.
 
