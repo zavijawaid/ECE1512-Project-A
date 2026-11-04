@@ -1,0 +1,355 @@
+\documentclass[journal]{IEEEtran}
+\usepackage{ifpdf}
+\usepackage{cite}
+\ifCLASSINFOpdf
+    \usepackage[pdftex]{graphicx}
+\else
+\fi
+\usepackage{amsmath}
+\usepackage{algorithmic}
+\usepackage{array}
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\usepackage{fixltx2e}
+\usepackage{stfloats}
+\usepackage{url}
+\usepackage{multirow}
+
+\usepackage[colorlinks=true, urlcolor=blue]{hyperref}
+\begin{document}
+
+\title{Project A: Evaluating and Improving Attention-Based Multiple Instance Learning for Whole-Slide Image Classification}
+
+
+\author{Zavi Jawaid, zavi.jawaid@mail.utoronto.ca, 1007926559 \\
+Department of Electrical \& Computer Engineering, University of Toronto
+}
+
+
+\markboth{}%
+{Shell \MakeLowercase{\textit{et al.}}: Bare Demo of IEEEtran.cls for IEEE Journals}
+
+\maketitle
+
+\begin{abstract}
+\textit{
+This report investigates Attention-Based Multiple Instance Learning (ABMIL) for whole-slide image (WSI) classification. A literature review of existing Multiple Instance Learning (MIL) methods is presented, followed by an evaluation of the baseline ABMIL model on three histopathology datasets: CAMELYON16, CAMELYON17, and BRACS. Two research extensions are proposed to improve the baseline attention mechanism, focusing on critical-instance-guided attention and Transformer-based self-attention. The first extension is implemented and evaluated against the baseline across all three datasets. Experimental results show improvements in classification accuracy, AUROC, and F1-score, with the largest AUROC improvement observed on CAMELYON16. However, overfitting remains a challenge, particularly for CAMELYON17 and BRACS. The project implementation and supporting materials are available at \href{https://github.com/zavijawaid/ECE1512-Project-A}{https://github.com/zavijawaid/ECE1512-Project-A}.
+}
+\end{abstract}
+\IEEEpeerreviewmaketitle
+
+
+
+\section{Introduction}
+WSIs are widely used in digital pathology to examine tissue samples and identify abnormalities. However, their high resolution and large number of image patches make automated classification challenging. Traditional supervised learning methods often require detailed annotations of individual image regions, which can be time-consuming and expensive to obtain. MIL addresses this challenge by treating each WSI as a collection of image patches, known as a bag, and learning from slide-level labels without requiring annotations for individual patches.
+
+Attention-Based Multiple Instance Learning (ABMIL) improves conventional MIL approaches by introducing a trainable attention mechanism that assigns different importance weights to individual patches. This allows the model to focus on potentially relevant regions when generating slide-level predictions. However, conventional ABMIL does not explicitly consider relationships between patches when calculating attention weights, which may limit its ability to identify important tissue characteristics.
+
+This project evaluates the baseline ABMIL architecture on three histopathology datasets: CAMELYON16, CAMELYON17, and BRACS. A literature review of existing MIL approaches is first presented, followed by an analysis of the baseline model's classification performance and training behaviour. Two research extensions are then proposed to improve the attention mechanism. The first incorporates critical-instance-guided attention inspired by DSMIL, while the second explores Transformer-based self-attention inspired by TransMIL. The first extension is implemented and evaluated against the baseline to determine whether incorporating relationships between patches can improve WSI classification performance.
+
+\section{Literature Review}
+\subsection{ABMIL}
+
+MIL is a weakly supervised learning approach in which data is organized into collections of instances, known as bags, with a single label assigned to each bag rather than individual instances. In binary MIL, a bag is considered positive if at least one instance belongs to the positive class, and negative otherwise. MIL is particularly useful in medical image analysis, where obtaining detailed annotations for individual image regions can be time-consuming and expensive [1].
+
+Existing MIL methods generally follow two approaches, instance-level and embedding-level classification. Instance-level methods independently predict scores for each instance before aggregating them into a bag-level prediction. In contrast, embedding-level methods transform individual instances into feature representations, which are combined before classification. Traditional MIL architectures commonly use maximum or mean pooling to aggregate instance information. However, these operations are predefined and cannot adapt to the relative importance of different instances [1].
+
+To address these limitations, Ilse et al. [1] proposed Attention-based Deep Multiple Instance Learning (ABMIL), which introduces a trainable attention mechanism for aggregating instance embeddings. Rather than treating all instances equally or selecting only the maximum activation, ABMIL assigns learned attention weights to individual instances based on their relevance to the bag-level prediction. The resulting weighted representation is then passed through a classifier. The authors also introduce a gated-attention mechanism to improve the flexibility of the attention network. Both approaches maintain permutation invariance and allow the model to be trained end-to-end through backpropagation.
+
+MIL models are typically trained using bag-level labels, with binary classification models optimizing a negative log-likelihood or binary cross-entropy loss. Their performance is evaluated using metrics such as accuracy, precision, recall, F1-score, and area under the ROC curve (AUC). Ilse et al. [1] evaluated their approach on classical MIL benchmarks, an MNIST-based dataset, and two histopathology datasets. Their results demonstrated that attention-based MIL achieved competitive classification performance, particularly when training data was limited, while also providing interpretability through attention weights that highlight potentially important instances.
+
+Overall, attention-based MIL improves upon traditional pooling approaches by learning the relative importance of individual instances, providing a flexible framework for weakly supervised classification. However, challenges remain in extending these methods to multiclass problems and capturing dependencies between instances, presenting opportunities for further research.
+
+\subsection{CLAM}
+Lu et al. [5] proposed Clustering-constrained Attention Multiple Instance Learning (CLAM), a weakly supervised framework designed to improve WSI classification through attention-based learning and instance-level clustering. Traditional MIL approaches often require large amounts of labeled training data and may struggle to identify diagnostically relevant regions within gigapixel-sized WSIs. Additionally, conventional MIL methods are commonly designed for binary classification tasks, limiting their applicability to multi-class cancer subtyping problems. CLAM addresses these limitations by improving data efficiency, interpretability, and classification performance while requiring only slide-level labels.
+
+The CLAM framework begins by dividing each WSI into smaller image patches, which are processed using a pretrained CNN to extract feature embeddings. These embeddings are passed through an attention-based MIL network that assigns class-specific attention scores to individual patches based on their diagnostic relevance. Unlike conventional attention-based MIL approaches, CLAM introduces multiple attention branches, allowing the model to learn distinct slide-level representations for different classes. Additionally, CLAM incorporates an instance-level clustering mechanism that selects patches with the highest and lowest attention scores and assigns them pseudo-labels representing positive and negative evidence for a particular class. These patches are used to train clustering layers that encourage the model to distinguish diagnostically relevant features from irrelevant regions. The framework jointly optimizes slide-level classification using cross-entropy loss and instance-level clustering using a smooth SVM loss.
+
+Lu et al. [5] evaluated CLAM on three histopathology classification tasks: renal cell carcinoma subtyping, non-small cell lung cancer subtyping, and lymph node metastasis detection. The framework achieved average AUC scores of 0.991, 0.956, and 0.953, respectively, demonstrating strong classification performance across binary and multi-class tasks. Furthermore, CLAM consistently outperformed conventional max-pooling-based MIL approaches, particularly when limited training data was available. The authors also demonstrated that CLAM could generalize to independent datasets, biopsy slides, and cellphone microscopy images without additional fine-tuning. Through attention-based heatmaps, the framework was able to highlight diagnostically relevant tissue regions, providing greater interpretability without requiring patch-level annotations.
+
+\subsection{DSMIL}
+Li et al. [2] proposed Dual-Stream Multiple Instance Learning (DSMIL), a framework designed to improve WSI classification using weakly supervised learning. Traditional MIL approaches often struggle with large bags containing highly imbalanced instances, particularly when only a small portion of an image contains positive regions. Furthermore, conventional pooling methods may fail to capture relationships between instances, limiting classification performance.
+
+To address these limitations, DSMIL introduces a dual-stream architecture that combines instance-level and embedding-level classification. The first stream applies an instance-level classifier followed by max pooling to identify the highest-scoring instance, referred to as the critical instance. The second stream uses an attention mechanism to measure the similarity between each instance and the critical instance, assigning higher attention weights to instances with similar feature representations. These weighted embeddings are aggregated into a single bag representation, which is passed through a classifier to produce a bag-level score. The final prediction is obtained by averaging the scores from both streams, allowing DSMIL to combine the advantages of instance-level and embedding-level approaches.
+
+Additionally, DSMIL incorporates self-supervised contrastive learning to extract meaningful feature representations without requiring instance-level annotations. The authors also introduce a multiscale feature fusion mechanism that combines information from different image magnifications, allowing the model to capture both local and broader tissue characteristics.
+
+The model is trained using slide-level labels, with a ResNet18 feature extractor pretrained through contrastive learning and a MIL aggregator optimized using the Adam optimizer. Its performance is evaluated using classification accuracy, AUC, and free-response receiver operating characteristic (FROC) analysis for tumor localization. Experiments on  CAMELYON16 and TCGA lung cancer datasets demonstrate improvements over existing MIL approaches, including ABMIL. In particular, the multiscale DSMIL model achieves classification accuracies of 89.92\% and 92.86\% on Camelyon16 and TCGA, respectively, when using contrastively learned features.
+
+\subsection{TransMIL}
+Shao et al. [3] proposed Transformer-based Multiple Instance Learning (TransMIL), a framework designed to improve WSI classification by explicitly modeling correlations between instances. Traditional MIL approaches, including ABMIL and DSMIL, primarily focus on identifying important instances without fully capturing the relationships between different image regions. However, spatial and morphological relationships between tissue regions can provide valuable information for accurate cancer diagnosis.
+
+To address these limitations, TransMIL introduces a Transformer-based architecture that uses self-attention to capture dependencies between instances. Each WSI is divided into patches, which are converted into feature embeddings using a pretrained ResNet50 network. These embeddings are then processed by a Transformer-based module consisting of two Transformer layers and a Pyramid Position Encoding Generator (PPEG). The first Transformer layer models correlations between patch embeddings, while PPEG incorporates spatial information using convolutional kernels of different sizes. The second Transformer layer further aggregates the learned features, and a class token is used to generate the final bag-level prediction. Additionally, TransMIL employs Nyström-based self-attention to reduce computational complexity, allowing the model to efficiently process thousands of patches within a single WSI.
+
+The model is trained using slide-level labels with a cross-entropy loss function and the Lookahead optimizer. Its performance is evaluated using classification accuracy and area under the ROC curve (AUC). Shao et al. [3] conducted experiments on three public histopathology datasets: CAMELYON16, TCGA-NSCLC, and TCGA-RCC. TransMIL achieved AUC scores of 93.09\%, 96.03\%, and 98.82\%, respectively, outperforming existing MIL approaches, including ABMIL and DSMIL. The authors also demonstrated that TransMIL converges approximately two to three times faster than competing methods, while providing interpretable attention heatmaps that highlight important tissue regions.
+
+\subsection{DTFD-MIL}
+Zhang et al. [4] proposed Double-Tier Feature Distillation Multiple Instance Learning (DTFD-MIL), a framework designed to improve WSI classification by addressing the challenges associated with limited training data and large numbers of image patches. Traditional MIL approaches typically process each WSI as a single bag containing hundreds or thousands of instances. However, histopathology datasets often contain relatively few labeled slides, increasing the risk of overfitting and limiting model generalization. Additionally, positive regions may occupy only a small portion of a WSI, making it difficult for MIL models to identify diagnostically relevant instances using slide-level labels alone.
+
+To address these limitations, DTFD-MIL introduces a double-tier architecture that divides each WSI into multiple smaller groups of patches, referred to as pseudo-bags. Each pseudo-bag inherits the label of its original slide, effectively increasing the number of training bags. In the first tier, an attention-based MIL model independently processes each pseudo-bag to learn instance representations and generate predictions. The framework then applies feature distillation to extract representative features from each pseudo-bag, which are subsequently passed to a second attention-based MIL model to generate the final slide-level prediction. The authors investigate four feature distillation strategies: Maximum Selection (MaxS), Maximum-Minimum Selection (MaxMinS), Maximum Attention Score Selection (MAS), and Aggregated Feature Selection (AFS). Additionally, the framework introduces a method for estimating instance-level class probabilities using principles derived from Grad-CAM, allowing the model to identify diagnostically relevant patches more reliably than through attention scores alone.
+
+The framework is trained using slide-level labels, with both tiers optimized through cross-entropy loss functions. Zhang et al. [4] evaluated DTFD-MIL on two public histopathology datasets, CAMELYON16 and TCGA lung cancer, using classification accuracy, F1 score, and area under the ROC curve (AUC). On CAMELYON16, the AFS strategy achieved the highest performance, with an accuracy of 90.8\%, an F1 score of 88.2\%, and an AUC of 94.6\%. On TCGA lung cancer, the MaxMinS strategy achieved the best results, with an accuracy of 89.4\%, an F1 score of 89.1\%, and an AUC of 96.1\%. These results demonstrated improvements over several existing MIL approaches, including ABMIL, DSMIL, and TransMIL. Furthermore, the authors showed that the proposed instance probability estimation method produced more accurate localization of tumor regions compared to conventional attention-based heatmaps.
+
+\section{Baseline Evaluation Summary}
+
+The baseline ABMIL model was trained and evaluated on three histopathology datasets: CAMELYON16, CAMELYON17, and BRACS. For each dataset, the model was trained for 30 epochs, with the optimal checkpoint selected based on the sum of the validation AUROC and F1-score.The selected checkpoint was then evaluated on the corresponding test set to measure its performance. Model performance was measured using four evaluation metrics: classification accuracy, AUROC, F1-score, and cross-entropy loss. The resulting test performance across all three datasets is summarized in Table I. 
+
+The ABMIL framework consists of three primary components that contribute to the final prediction: the encoder, the attention-based aggregator, and the classifier. The encoder is responsible for representing individual image patches as feature embeddings that capture relevant visual characteristics of the tissue. In the baseline implementation, these embeddings are pre-extracted using a feature extraction network and remain fixed throughout training. A dimensionality reduction module then reduces the size of the feature embeddings, making them easier for the model to process and classify. The attention-based aggregator combines the individual patch embeddings into a single slide-level representation. Using a gated attention mechanism, the model assigns greater importance to patches containing more relevant information while reducing the influence of less informative regions.
+This allows the model to identify relevant tissue characteristics without needing labels for individual image patches. Finally, the classifier processes the aggregated slide representation through a fully connected layer to produce slide-level class predictions. Together, these components allow the model to transform patch-level information into a single prediction for the entire WSI.
+
+The results demonstrate noticeable differences in classification performance across the three datasets. CAMELYON16 achieved the highest overall performance, with an accuracy of 82.95\%, AUROC of 0.8704, and F1-score of 0.8159. CAMELYON17 achieved moderately lower performance, with an accuracy of 78.50\%, AUROC of 0.8356, and F1-score of 0.5115. BRACS exhibited the weakest classification performance, achieving an accuracy of 40.70\% and F1-score of 0.3439, despite maintaining an AUROC of 0.7919. These differences suggest that the effectiveness of the baseline ABMIL model varies depending on the characteristics and complexity of the dataset.
+
+The training and validation loss curves provide further insight into how well the baseline model learns and performs on unseen data. For CAMELYON16, as shown in Fig.~\ref{fig:c16_training}, both training and validation losses decreased rapidly during the initial epochs. The training loss decreased from approximately 0.676 during the first epoch to nearly zero by the end of training. Similarly, the validation loss decreased from approximately 0.506 to nearly zero, indicating that the model learned the training data well and also performed well on the validation set. Validation AUROC and F1-score reached 1.0 by the second epoch and remained at these values throughout the remaining epochs. However, the final test performance was lower than the validation performance, suggesting that the model did not generalize perfectly to the held-out test slides. The unusually strong validation results may also indicate that the validation set was relatively easy or insufficiently representative of the test distribution.
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{C16_curve.png}
+    \caption{Training and validation performance of the baseline ABMIL model on the CAMELYON16 dataset over 30 epochs.}
+    \label{fig:c16_training}
+\end{figure}
+
+For CAMELYON17, as shown in Fig.~\ref{fig:c17_training}, the training loss decreased consistently throughout the 30 epochs, falling from approximately 1.061 to 0.053. In contrast, the validation loss initially decreased from 1.026 to approximately 0.433 by epoch 6, before fluctuating and generally increasing during later epochs. This divergence between training and validation losses suggests that the model began to overfit the training data as training progressed. Although training accuracy reached approximately 98.88\% by the final epoch, improvements in training performance did not translate into consistent validation improvements. The best checkpoint was selected at epoch 17, where the validation AUROC and F1-score reached 0.878 and 0.758, respectively. However, the held-out test performance was lower, particularly in terms of F1-score, indicating limitations in the model's ability to generalize to unseen slides.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{C17_curve.png}
+    \caption{Training and validation performance of the baseline ABMIL model on the CAMELYON17 dataset over 30 epochs.}
+    \label{fig:c17_training}
+\end{figure}
+
+For BRACS, as shown in Fig.~\ref{fig:bracs_training}, the training and validation losses exhibited the most pronounced divergence among the three datasets. The training loss decreased steadily from approximately 1.596 to 0.120, while the training accuracy increased from 44.73\% to 96.14\%. However, the validation loss remained relatively high during the early epochs and subsequently increased substantially, reaching approximately 3.076 by the final epoch. This behaviour provides strong evidence of overfitting, as the model continued to improve its predictions on the training set while becoming increasingly inaccurate on the validation set. The best checkpoint was selected at epoch 10, where the validation AUROC reached 0.835 and the F1-score reached 0.415. Despite selecting an earlier checkpoint, the model achieved only 40.70\% test accuracy and an F1-score of 0.3439, demonstrating limited generalization performance on the dataset.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{BRACS_curve.png}
+    \caption{Training and validation performance of the baseline ABMIL model on the BRACS dataset over 30 epochs.}
+    \label{fig:bracs_training}
+\end{figure}
+
+Overall, the results show that the baseline ABMIL model can effectively learn important features from whole-slide images, but its performance is strongly dependent on the dataset being evaluated. CAMELYON16 demonstrated the most favourable convergence behaviour, with both training and validation losses approaching zero. In contrast, CAMELYON17 and BRACS exhibited increasingly large gaps between training and validation losses, indicating that their learned representations did not generalize as effectively to unseen data. The difference between CAMELYON16 and BRACS may be because of differences in classification complexity. CAMELYON16 involves binary classification of metastatic and non-metastatic tissue, whereas BRACS involves distinguishing between multiple breast tissue categories. The increased number of classes and potentially subtle morphological differences between tissue categories may make BRACS more challenging for the baseline model. CAMELYON17 also presents additional challenges associated with variation across whole-slide images and their corresponding tissue characteristics.
+
+Another important observation is that AUROC remained relatively high across all three datasets, even when classification accuracy and F1-score were lower. This was particularly noticeable for BRACS, where the model achieved an AUROC of 0.7919 but an accuracy of only 40.70\%. This suggests that the model could still distinguish between classes to some extent, but often struggled to predict the correct class. Differences in the number of samples per class and the difficulty of distinguishing between tissue types may help explain these results. The results also show the importance of selecting the best model checkpoint and considering multiple evaluation metrics. Although the training loss continued to decrease for all three datasets, the best validation results were achieved before the final epoch. This shows that a lower training loss does not always mean better performance on unseen data. Similarly, higher training accuracy does not necessarily lead to better results on the test set.
+
+
+
+\begin{table*}[htbp]
+    \centering
+    \label{tab:baseline_results}
+    \caption {Baseline ABMIL Test Performance Across the Three Datasets}
+    \begin{tabular}{|l|c|c|c|c|c|}
+        \hline
+        \textbf{Dataset} & \textbf{Accuracy (\%)} & \textbf{AUROC} & \textbf{F1-Score} & \textbf{Loss} & \textbf{Best Epoch} \\
+        \hline
+        CAMELYON16 & 82.95 & 0.8704 & 0.8159 & 0.4165 & 2 \\
+        \hline
+        CAMELYON17 & 78.50 & 0.8356 & 0.5115 & 0.7026 & 17 \\
+        \hline
+        BRACS & 40.70 & 0.7919 & 0.3439 & 1.6356 & 10 \\
+        \hline
+    \end{tabular} 
+\end{table*}
+
+
+\section{Research Extensions}
+
+\subsection{Proposal 1}
+The first proposed research extension aims to improve the attention mechanism of the baseline ABMIL model by incorporating critical-instance-guided attention, inspired by the DSMIL framework proposed by Li et al. [2]. Unlike conventional ABMIL, which independently computes attention scores for each instance using learned feature transformations, DSMIL identifies the most important patch and uses it to guide how information from other patches is combined [2].
+
+A limitation of the conventional ABMIL framework is that attention weights are computed without explicitly considering relationships between individual instances. This can be particularly challenging in WSI classification, where relevant regions may occupy only a small portion of the image. Consequently, the model may assign attention to less informative patches while failing to adequately emphasize regions containing important pathological features [2]. To address this limitation, the proposed extension introduces a critical-instance selection mechanism alongside the existing gated attention architecture. An auxiliary instance classifier first assigns a prediction score to each patch embedding, allowing the model to identify the highest-scoring instance for each class. The selected critical instance is then used as a reference to compute similarity scores between itself and the remaining patch embeddings, following the critical-instance-based aggregation principle introduced in DSMIL [2]. These similarity scores are incorporated into the original gated attention mechanism, allowing the model to consider both the individual importance of each patch and its relationship to a potentially informative reference instance. The modified attention weights are then used to aggregate patch embeddings into a slide-level representation, which is passed through the existing classification layer. Additionally, an auxiliary classification task is introduced to help the model identify important patches using slide-level labels.
+
+The motivation behind this design is to preserve the computational simplicity of ABMIL while incorporating the instance relationship modeling introduced by DSMIL [2]. By combining gated attention with critical-instance-guided similarity, the proposed architecture aims to improve the identification of diagnostically relevant regions. The effectiveness of this extension will be evaluated against the original ABMIL baseline on CAMELYON16, CAMELYON17, and BRACS using classification accuracy, AUC, and other relevant performance metrics.
+
+\subsubsection{Implementation}
+The proposed research extension was implemented by modifying the existing ABMIL architecture to incorporate critical-instance-guided attention, inspired by DSMIL [2]. The implementation maintains the original feature dimensionality reduction module, gated attention mechanism, and fully connected classifier, while introducing additional components to identify important patches and calculate similarities between patch embeddings.
+
+First, an auxiliary instance classifier was introduced using a linear layer that assigns a prediction score to each patch embedding for every class. The patch with the highest score for each class is selected as the critical instance. This allows the model to identify potentially important patches that can be used to guide the attention mechanism. Next, a learnable linear transformation was added to project the patch embeddings and selected critical instances into a common feature space. The transformed features are normalized, and cosine similarity is calculated between each patch and the corresponding class-specific critical instance. These similarity scores are then combined with the original gated attention scores using a learnable scaling parameter. A softmax operation is applied to obtain the final attention weights, allowing the model to consider both the importance of individual patches and their similarity to the selected critical instance.
+
+Unlike the baseline ABMIL model, which generates a single attention-weighted representation for each slide, the modified architecture produces a separate representation for each class. These representations are obtained by calculating the weighted sum of patch embeddings using their corresponding class-specific attention weights. Each representation is then passed through the existing fully connected classifier, and the corresponding class prediction scores are extracted to produce the final slide-level prediction.
+
+To train the modified architecture, an auxiliary classification loss was introduced alongside the original cross-entropy loss used in the baseline ABMIL model. The auxiliary loss is calculated using the highest instance prediction score for each class and the corresponding slide-level label. The total training loss is defined as:
+\begin{equation}
+\mathcal{L}_{total} = \mathcal{L}_{classification} + 0.25\mathcal{L}_{auxiliary}
+\end{equation}
+
+where \(\mathcal{L}_{classification}\) represents the original slide-level cross-entropy loss, and \(\mathcal{L}_{auxiliary}\) represents the additional instance-level classification loss. The auxiliary loss is weighted by 0.25 to help the model identify informative patches without requiring individual patch labels. The modified model was trained using the AdamW optimizer with the same learning rate and weight decay settings as the baseline. The existing training and evaluation procedures were reused, with the best-performing checkpoint selected based on the combined validation AUROC and F1-score. The selected model is then evaluated on the held-out test set using classification accuracy, AUROC, F1-score, and cross-entropy loss. The extension is designed to be evaluated on CAMELYON16, CAMELYON17, and BRACS using the same dataset configurations as the baseline. This allows the performance of the critical-instance-guided attention mechanism to be compared directly against the original ABMIL architecture.
+
+\subsubsection{Evaluation}
+
+The proposed critical-instance-guided ABMIL extension was trained and evaluated on three histopathology datasets: CAMELYON16, CAMELYON17, and BRACS. Each model was trained for 30 epochs, with the best-performing checkpoint selected based on the combined validation AUROC and F1-score. The selected checkpoint was then evaluated on the corresponding test set. Model performance was assessed using classification accuracy, AUROC, F1-score, and cross-entropy loss. The resulting test metrics are summarized in Table II and compared against the baseline ABMIL results presented in Table I.
+
+\begin{table*}[htbp]
+\centering
+\caption{Performance of the Proposed Critical-Instance-Guided ABMIL Extension}
+\label{tab:extension_results}
+\begin{tabular}{|l|c|c|c|c|c|}
+\hline
+\textbf{Dataset} & \textbf{Accuracy (\%)} & \textbf{AUROC} & \textbf{F1-score} & \textbf{Loss} & \textbf{Best Epoch} \\
+\hline
+CAMELYON16 & 86.82 & 0.9355 & 0.8470 & 0.3979 & 3 \\
+\hline
+CAMELYON17 & 80.50 & 0.8585 & 0.5574 & 0.5695 & 11 \\
+\hline
+BRACS & 44.19 & 0.8170 & 0.3694 & 1.3691 & 7 \\
+\hline
+\end{tabular}
+\end{table*}
+
+The results show that the proposed extension improved classification performance across all three datasets. For CAMELYON16, accuracy increased from 82.95\% to 86.82\%, while AUROC improved from 0.8704 to 0.9355. The F1-score also increased from 0.8159 to 0.8470, representing an improvement across all evaluation metrics. These results suggest that incorporating critical-instance-guided attention helped the model better identify useful information from the patch embeddings when making slide-level predictions.
+
+Similar improvements were observed for CAMELYON17, where accuracy increased from 78.50\% to 80.50\% and AUROC improved from 0.8356 to 0.8585. The F1-score also increased from 0.5115 to 0.5574. Although the improvements were smaller than those observed for CAMELYON16, the extension consistently outperformed the baseline. For BRACS, accuracy increased from 40.70\% to 44.19\%, while AUROC improved from 0.7919 to 0.8170. The F1-score also increased from 0.3439 to 0.3694. Despite these improvements, BRACS continued to have the lowest classification accuracy and F1-score among the three datasets, suggesting that the model still had difficulty correctly distinguishing between its different tissue categories.
+
+The training and validation loss curves provide further insight into the behaviour of the proposed extension throughout training. The training loss represents the combined classification and auxiliary losses, while the validation loss represents only the classification loss. As shown in Fig. 4, the CAMELYON16 model experienced a rapid decrease in both training and validation loss during the early epochs. The validation loss approached zero after approximately 10 epochs and remained relatively low for the remainder of training. The training loss also continued to decrease, indicating that the model was able to learn effectively from the training data. The relatively stable validation loss suggests that the model maintained strong performance on the validation set, which is consistent with its high test accuracy and AUROC. For CAMELYON17, the loss curves shown in Fig. 5 demonstrate a different training pattern. The training loss decreased steadily throughout the 30 epochs, while the validation loss initially decreased before beginning to fluctuate during later epochs. In particular, several increases in validation loss were observed despite the continued reduction in training loss. This suggests that the model began to overfit the training data, as improvements during training did not consistently translate to better validation performance. Nevertheless, the extension achieved higher test accuracy, AUROC, and F1-score compared to the baseline, indicating that the proposed attention mechanism still provided improvements in classification performance.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{C16_curve_ext.png}
+    \caption{Training and validation loss of the proposed extension on CAMELYON16.}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{C17_curve_ext.png}
+    \caption{Training and validation loss of the proposed extension on CAMELYON17.}
+    \label{fig:placeholder}
+\end{figure}
+
+A more noticeable difference was observed for BRACS, as illustrated in Fig. 6. Although the training loss decreased consistently throughout training, the validation loss began increasing after the early epochs and continued to fluctuate significantly. This indicates that the model was learning the training data but struggled to maintain similar performance on the validation set. The large difference in the training and validation loss trends suggests substantial overfitting. This behaviour is also reflected in the relatively low test accuracy of 44.19\% and F1-score of 0.3694. However, the extension still achieved better results than the baseline, suggesting that critical-instance-guided attention provided some benefit even on the more challenging BRACS dataset.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{BRACS_curve_ext.png}
+    \caption{Training and validation loss of the proposed extension on BRACS.}
+    \label{fig:placeholder}
+\end{figure}
+
+Overall, the experimental results demonstrate that the proposed critical-instance-guided ABMIL extension improved classification performance across all three datasets. The improvements in accuracy, AUROC, and F1-score suggest that combining the original gated attention mechanism with critical-instance-based similarity information can help the model better use the available patch embeddings. However, the loss curves also highlight limitations in the model's ability to generalize, particularly for CAMELYON17 and BRACS, where validation performance became less stable during later epochs. These findings suggest that while the proposed extension improves the baseline architecture, additional techniques such as adjustments to the attention mechanism could help reduce overfitting and improve performance on unseen slides.
+
+\subsection{Proposal 2}
+
+The second proposed research extension aims to improve the attention mechanism of the baseline ABMIL model by incorporating Transformer-based self-attention, inspired by the TransMIL framework proposed by Shao et al. [3]. Unlike conventional ABMIL, which independently assigns attention scores to individual patch embeddings, TransMIL uses self-attention to model relationships between different patches within a WSI [3].
+
+A limitation of the conventional ABMIL framework is that it does not explicitly consider relationships between patches when calculating attention weights. This can be challenging in WSI classification, where important pathological features may be spread across different regions of a slide. As a result, the model may overlook useful information that could be obtained by considering how different patches relate to one another. TransMIL addresses this limitation by using Transformer-based self-attention to capture relationships between patch embeddings, allowing the model to consider information from multiple regions when making predictions [3].
+
+To address this limitation, the proposed extension introduces a Transformer-based self-attention module into the existing ABMIL architecture. The pre-extracted patch embeddings are first processed by the existing feature dimensionality reduction layer. These embeddings are then passed through a self-attention module, which allows each patch to incorporate information from other patches within the same slide. Following the approach introduced in TransMIL, the self-attention mechanism calculates relationships between patch embeddings to produce updated feature representations that contain information about both individual patches and their relationships with other regions [3]. The updated patch embeddings are subsequently passed through the existing gated attention mechanism, which assigns attention weights based on their importance to the slide-level prediction. These weights are used to aggregate the updated embeddings into a single slide-level representation, which is then passed through the existing classification layer. Unlike the full TransMIL architecture, which uses multiple Transformer layers and a dedicated positional encoding module, the proposed extension focuses on incorporating a self-attention module while preserving the original ABMIL aggregation and classification components.
+
+The motivation behind this design is to preserve the simplicity of the original ABMIL architecture while introducing the ability to model relationships between different patches. By combining Transformer-based self-attention with conventional gated attention, the proposed extension aims to improve how the model identifies and combines important information across a WSI. The effectiveness of this extension would be evaluated against the original ABMIL baseline on CAMELYON16, CAMELYON17, and BRACS using classification accuracy, AUROC, F1-score, and cross-entropy loss.
+
+\section{Conclusion}
+This project evaluated the baseline ABMIL model for WSI classification and explored methods for improving its attention mechanism. The baseline results showed strong performance on CAMELYON16, while CAMELYON17 and BRACS presented greater challenges, particularly due to overfitting and lower classification accuracy. Two research extensions were proposed, focusing on critical-instance-guided attention and Transformer-based self-attention. The first extension was implemented and evaluated across all three datasets, achieving improvements in accuracy, AUROC, and F1-score compared to the baseline. These results suggest that incorporating information about relationships between patches can improve the effectiveness of attention-based MIL models. However, the training and validation results also showed that overfitting remains a challenge, especially for CAMELYON17 and BRACS. Overall, the findings demonstrate the potential of critical-instance-guided attention for improving WSI classification. 
+
+
+\ifCLASSOPTIONcaptionsoff
+  \newpage
+\fi
+
+\appendices
+\section{Machine Learning Paper Reproducibility Checklist}
+\label{app:checklist}
+This checklist summarizes the reproducibility information
+provided in this report, following the Machine Learning
+Reproducibility Checklist. The implementation and supporting
+materials are available at
+\href{https://github.com/zavijawaid/ECE1512-Project-A}
+{https://github.com/zavijawaid/ECE1512-Project-A}.
+The GitHub repository includes a separate reproducibility
+checklist in its README, covering the code and experimental
+setup.
+\smallskip \\
+
+\noindent\textbf{Models and Algorithms.}
+The baseline ABMIL architecture and proposed research
+extensions are described in Sections III and IV.
+The models use pre-extracted patch embeddings and
+slide-level labels. A formal computational complexity
+analysis is not included.
+
+\smallskip
+\noindent\textbf{Theoretical Claims.}
+No new theoretical claims or mathematical proofs
+are presented.
+
+\smallskip
+\noindent\textbf{Datasets.}
+Experiments were conducted using CAMELYON16,
+CAMELYON17, and BRACS. Each WSI is represented
+using pre-extracted patch embeddings stored in
+HDF5 files. The embeddings remain fixed throughout
+training. Dataset split sizes and preprocessing
+details are provided in the repository.
+
+\smallskip
+\noindent\textbf{Code Availability.}
+The GitHub repository includes the baseline and
+research extension implementations, dataset
+configurations, training and evaluation procedures,
+and required dependencies. Instructions for running
+the experiments are provided in the README.
+
+\smallskip
+\noindent\textbf{Experimental Results.}
+Both the baseline and proposed extension were
+trained for 30 epochs on each dataset. The best
+checkpoint was selected using the sum of validation
+AUROC and F1-score. Performance was evaluated
+using classification accuracy, AUROC, F1-score,
+and cross-entropy loss. The results are presented
+in Tables I and II, with training and validation
+loss curves shown in Figures 1--6.
+Results are reported without standard deviations
+or confidence intervals.
+
+
+
+\begin{thebibliography}{1}
+
+\bibitem{Ilse2018}
+M.~Ilse, J.~M. Tomczak, and M.~Welling,
+``Attention-based deep multiple instance learning,''
+in \emph{Proc. 35th Int. Conf. Machine Learning (ICML)},
+vol.~80, pp.~2127--2136, 2018. \\
+
+\bibitem{Li2021}
+B.~Li, Y.~Li, and K.~W. Eliceiri,
+``Dual-stream multiple instance learning network for whole slide
+image classification with self-supervised contrastive learning,''
+in \emph{Proc. IEEE/CVF Conf. Computer Vision and Pattern
+Recognition (CVPR)}, pp.~14318--14328, 2021. \\
+
+\bibitem{Shao2021}
+Z.~Shao, H.~Bian, Y.~Chen, Y.~Wang, J.~Zhang,
+X.~Ji, and Y.~Zhang,
+``TransMIL: Transformer based correlated multiple
+instance learning for whole slide image classification,''
+in \emph{Advances in Neural Information Processing
+Systems (NeurIPS)}, vol.~34, pp.~2136--2147, 2021. \\
+
+
+\bibitem{Zhang2022}
+H.~Zhang, Y.~Meng, Y.~Zhao, Y.~Qiao, X.~Yang,
+S.~E.~Coupland, and Y.~Zheng,
+``DTFD-MIL: Double-tier feature distillation
+multiple instance learning for histopathology
+whole slide image classification,''
+in \emph{Proc. IEEE/CVF Conf. Computer Vision
+and Pattern Recognition (CVPR)},
+pp.~18802--18812, 2022. \\
+
+
+\bibitem{Lu2021}
+M.~Y.~Lu, D.~F.~K.~Williamson, T.~Y.~Chen,
+R.~J.~Chen, M.~Barbieri, and F.~Mahmood,
+``Data-efficient and weakly supervised
+computational pathology on whole-slide images,''
+\emph{Nature Biomedical Engineering},
+vol.~5, no.~6, pp.~555--570, 2021. \\
+
+
+
+
+
+\end{thebibliography}
+
+\end{document}
+
+
