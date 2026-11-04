@@ -1,0 +1,14 @@
+# do not include these
+feature/
+slide/
+__pycache__/
+
+
+*.h5
+*.tif
+*.zip
+*.DS_Store
+*.pyc
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
